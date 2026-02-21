@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawGPT — Локальный ИИ клиент</title>
+    <meta name="description" content="Мощный и красивый Desktop-клиент для Ollama.">
+    <style>
+        :root {
+            --bg: #050505;
+            --text: #ffffff;
+            --text-muted: #888888;
+            --accent: #10a37f;
+            --accent-glow: rgba(16, 163, 127, 0.4);
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --font: 'Segoe UI Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%; left: 20%;
+            width: 60vw; height: 60vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%);
+            opacity: 0.15;
+            filter: blur(80px);
+            z-index: -1;
+            animation: pulse 10s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(0, 0); opacity: 0.15; }
+            100% { transform: translate(-20px, 20px); opacity: 0.25; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            padding: 24px 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            animation: fadeInDown 0.8s ease forwards;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-circle {
+            width: 12px; height: 12px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .git-link {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        .git-link:hover { color: var(--text); }
+
+        .hero {
+            text-align: center;
+            padding: 80px 0 40px;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: 24px;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.2s forwards;
+            background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            font-size: 20px;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+            line-height: 1.6;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.4s forwards;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.6s forwards;
+            box-shadow: 0 0 20px rgba(16, 163, 127, 0.3);
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(16, 163, 127, 0.5);
+            background: #12c495;
+        }
+
+        .showcase {
+            margin-top: 60px;
+            margin-bottom: 100px;
+            position: relative;
+            perspective: 2000px;
+            opacity: 0;
+            animation: fadeInUp 1s ease 0.8s forwards;
+        }
+
+        .app-window {
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 100px -20px rgba(0,0,0,0.5);
+            overflow: hidden;
+            /* 3D TILT EFFECT */
+            transform: rotateX(5deg) scale(0.95);
+            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: #111;
+        }
+
+        .app-window:hover {
+            transform: rotateX(0deg) scale(1);
+        }
+
+        .app-window img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 1000px;
+        }
+
+        /* GLOW BEHIND IMAGE */
+        .showcase::after {
+            content: '';
+            position: absolute;
+            top: 10%; left: 5%; right: 5%; bottom: 0;
+            background: var(--accent);
+            filter: blur(120px);
+            opacity: 0.15;
+            z-index: -1;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            width: 100%;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 42px; }
+            p.subtitle { font-size: 16px; }
+            .app-window { transform: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-circle"></div>
+                RawGPT
+            </div>
+            <a href="https://gitverse.ru/rawnekoo/RawGPT" class="git-link" target="_blank">GitVerse →</a>
+        </header>
+
+        <section class="hero">
+            <h1>Локальный ИИ.<br>Приватно. Красиво.</h1>
+            <p class="subtitle">
+                Современный клиент для Ollama в стиле Opera Air.<br>
+                Поддержка Vision, файлов и полная конфиденциальность.
+            </p>
+            
+            <a href="https://gitverse.ru/rawnekoo/RawGPT/releases" class="cta-button" target="_blank">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Скачать для Windows
+            </a>
+        </section>
+
+        <!-- SCREENSHOT -->
+        <section class="showcase">
+            <div class="app-window">
+                <img src="./screenshot.png" alt="RawGPT Interface">
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 RawGPT. Open Source MIT License.</p>
+    </footer>
+
+</body>
+</html>
