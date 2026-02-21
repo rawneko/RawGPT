@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;">
+    <title>RawGPT</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="titlebar">
+        <div class="titlebar-drag">
+            <div class="titlebar-title"><div class="titlebar-logo"></div><span>RawGPT</span></div>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-btn" id="minBtn"><svg width="11" height="11" viewBox="0 0 11 11"><rect y="5" width="11" height="1.2" fill="currentColor"/></svg></button>
+            <button class="titlebar-btn" id="maxBtn"><svg width="11" height="11" viewBox="0 0 11 11"><rect x=".5" y=".5" width="10" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+            <button class="titlebar-btn close-btn" id="closeBtn"><svg width="11" height="11" viewBox="0 0 11 11"><path d="M1 1l9 9M10 1L1 10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        </div>
+    </header>
+    <div class="app-container">
+        <nav class="sidebar collapsed" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" id="newChatBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>Новый чат</span></button>
+                <button class="icon-btn" id="sidebarToggleBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
+            </div>
+            <div class="sidebar-search"><input type="text" placeholder="Поиск..." id="searchInput"></div>
+            <div class="sidebar-conversations" id="conversationList"></div>
+            <div class="connection-status"><div class="status-dot disconnected" id="statusDot"></div><span id="statusText">Не подключено</span></div>
+            <div class="sidebar-footer">
+                <div class="sidebar-footer-item" id="settingsBtn">
+                    <div class="user-avatar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    <span>Настройки</span>
+                </div>
+            </div>
+        </nav>
+        <main class="main-area">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-btn" id="menuBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
+                    <button class="model-selector" id="modelSelector">
+                        <span id="currentModelName">Выберите модель</span>
+                        <span class="model-features" id="modelFeatures"></span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                </div>
+                <div class="top-bar-right">
+                    <div class="btn-group" id="themeGroup">
+                        <button class="group-btn active" data-theme-set="dark">🌙</button>
+                        <button class="group-btn" data-theme-set="light">☀️</button>
+                        <button class="group-btn" data-theme-set="amoled">⚫</button>
+                    </div>
+                    <button class="top-icon-btn" id="refreshModelsBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
+                    <button class="top-icon-btn" id="newChatTopBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+                </div>
+            </header>
+            <div class="model-dropdown" id="modelDropdown">
+                <div class="model-dropdown-header"><span>Модели Ollama</span><button class="model-refresh-btn" id="dropdownRefreshBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button></div>
+                <div class="model-dropdown-list" id="modelDropdownList"><div class="model-dropdown-empty">Загрузка...</div></div>
+            </div>
+            <div class="chat-area" id="chatArea">
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-logo"><div class="welcome-logo-circle">R</div></div>
+                    <h1 class="welcome-title">Чем могу помочь?</h1>
+                    <p class="welcome-subtitle">Выберите модель и начните диалог</p>
+                    <div class="suggestions-grid" id="suggestionsGrid">
+                        <div class="suggestion-card" data-text="Напиши Python скрипт для сортировки файлов"><div class="suggestion-title">Python скрипт</div><div class="suggestion-sub">сортировка файлов</div></div>
+                        <div class="suggestion-card" data-text="Объясни квантовые вычисления простыми словами"><div class="suggestion-title">Простыми словами</div><div class="suggestion-sub">квантовые вычисления</div></div>
+                        <div class="suggestion-card" data-text="Составь план тренировок на неделю"><div class="suggestion-title">План тренировок</div><div class="suggestion-sub">на неделю</div></div>
+                        <div class="suggestion-card" data-text="Придумай 5 идей для приложения"><div class="suggestion-title">Идеи приложений</div><div class="suggestion-sub">мобильная разработка</div></div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages" style="display:none;"></div>
+            </div>
+            <div class="input-area" id="inputArea">
+                <button class="scroll-bottom-btn" id="scrollBottomBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+                <div class="attach-popup" id="attachPopup">
+                    <button class="attach-option" id="attachImage"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Изображение</button>
+                    <button class="attach-option" id="attachFile"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Файл</button>
+                </div>
+                <div class="file-previews" id="filePreviews"></div>
+                <div class="input-container compact" id="inputContainer">
+                    <div class="input-inner">
+                        <button class="attach-btn" id="attachBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+                        <textarea class="input-textarea" id="messageInput" placeholder="Сообщение RawGPT..." rows="1"></textarea>
+                        <button class="send-stop-btn send-mode" id="sendStopBtn" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="input-footer">RawGPT · Локальный ИИ</div>
+            </div>
+        </main>
+    </div>
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header"><h2>Настройки</h2><button class="modal-close-btn" id="settingsCloseBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+            <div class="modal-body">
+                <div class="settings-section"><h3 class="settings-section-title">Тема</h3><div class="settings-field"><div class="theme-selector" id="themeSelector"><div class="theme-option active" data-theme-val="dark"><div class="theme-preview dark-preview"></div>Тёмная</div><div class="theme-option" data-theme-val="light"><div class="theme-preview light-preview"></div>Светлая</div><div class="theme-option" data-theme-val="amoled"><div class="theme-preview amoled-preview"></div>AMOLED</div></div></div></div>
+                <div class="settings-section"><h3 class="settings-section-title">Ollama</h3><p class="settings-section-desc">По умолчанию <code>http://127.0.0.1:11434</code></p><div class="settings-field"><label class="settings-label">URL</label><div class="settings-input-row"><input type="text" class="settings-input" id="ollamaUrlInput" value="http://127.0.0.1:11434"><button class="settings-btn primary" id="testConnectionBtn">Тест</button></div><div class="connection-result" id="connectionResult"></div></div><div class="settings-field"><label class="settings-label">Статус</label><div class="settings-status"><div class="status-dot disconnected" id="settingsStatusDot"></div><span id="settingsStatusText">Не подключено</span></div></div><div class="settings-field"><label class="settings-label">Модели</label><div class="settings-models-list" id="settingsModelsList"><div class="settings-models-empty">Нет подключения</div></div></div></div>
+                <div class="settings-section"><h3 class="settings-section-title">Системный промпт</h3><div class="settings-field"><textarea class="settings-textarea" id="systemPromptInput" placeholder="You are a helpful assistant..." rows="3"></textarea></div></div>
+            </div>
+            <div class="modal-footer"><button class="settings-btn" id="settingsCancelBtn">Отмена</button><button class="settings-btn primary" id="settingsSaveBtn">Сохранить</button></div>
+        </div>
+    </div>
+    <div class="modal-overlay confirm-modal" id="deleteConfirmModal">
+        <div class="modal">
+            <div class="confirm-body"><div class="confirm-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></div><div class="confirm-title">Удалить чат?</div><div class="confirm-desc" id="deleteConfirmDesc">Будет удалён безвозвратно.</div></div>
+            <div class="confirm-actions"><button class="confirm-btn" id="deleteCancelBtn">Отмена</button><button class="confirm-btn danger" id="deleteConfirmBtn">Удалить</button></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
