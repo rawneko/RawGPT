@@ -16,7 +16,7 @@
 
 **RawGPT** — это современный интерфейс для локальных нейросетей (Ollama). Полная приватность, стильный дизайн "Opera Air" и мощный функционал. Всё работает локально на вашем ПК.
 
-![Скриншот интерфейса](https://gitverse.ru/rawneko/RawGPT/screenshot.png)
+![Скриншот интерфейса](https://gitverse.ru/rawnekoo/RawGPT/content/master/screenshot.png)
 
 ## ✨ Особенности
 
