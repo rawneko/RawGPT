@@ -37,6 +37,8 @@
 ### Скачать
 Перейдите в раздел **Releases** и скачайте последнюю версию `RawGPT.exe`.
 
+[Download the RawGPT for android](https://gitverse.ru/rawnekoo/RawGPT-android/realises)
+
 ### Запуск из исходного кода
 
 ```bash
