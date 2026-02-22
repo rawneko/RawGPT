@@ -110,9 +110,9 @@ if(state.modelCaps[modelName])return state.modelCaps[modelName];
 var caps={vision:false,thinking:false,tools:false,code:false};
 var base=modelName.split(':')[0].toLowerCase();
 
-if(/gemma3|llava|bakllava|moondream|llama3\.2|yi|minicpm/.test(base))caps.vision=true;
+if(/gemma3|llava|bakllava|moondream|minicpm-v|llama3\.2-vision|yi-vision/.test(base))caps.vision=true;
 if(/deepseek-r1|qwen3|qwq/.test(base))caps.thinking=true;
-if(/coder|codellama|starcoder|deepseek-coder/.test(base))caps.code=true;
+if(/coder|codellama|starcoder|deepseek-coder|code/.test(base))caps.code=true;
 
 try{
 var r=await api.ollamaModelShow(modelName);
@@ -124,15 +124,27 @@ var allText=tmpl+' '+params+' '+modelfile;
 
 if(r.data.details){
 var fams=r.data.details.families||[];
-if(fams.indexOf('clip')>=0||fams.indexOf('vision')>=0)caps.vision=true;
+for(var fi=0;fi<fams.length;fi++){
+var fam=fams[fi].toLowerCase();
+if(fam==='clip'||fam==='mllama'||fam.indexOf('vision')>=0)caps.vision=true;
+}
+if(r.data.details.family){
+var df=r.data.details.family.toLowerCase();
+if(df.indexOf('clip')>=0||df.indexOf('vision')>=0||df.indexOf('mllama')>=0)caps.vision=true;
+}
 }
 
-if(allText.indexOf('vision')>=0||allText.indexOf('image')>=0)caps.vision=true;
-if(allText.indexOf('think')>=0||allText.indexOf('reason')>=0)caps.thinking=true;
-if(allText.indexOf('tool')>=0||allText.indexOf('function')>=0)caps.tools=true;
-if(allText.indexOf('code')>=0||allText.indexOf('program')>=0)caps.code=true;
-
 if(r.data.projectors&&r.data.projectors.length>0)caps.vision=true;
+
+if(allText.indexOf('vision')>=0||allText.indexOf('image')>=0||allText.indexOf('.image')>=0)caps.vision=true;
+
+if(tmpl.indexOf('<think>')>=0||tmpl.indexOf('</think>')>=0||tmpl.indexOf('<reasoning>')>=0)caps.thinking=true;
+if(allText.indexOf('think')>=0&&allText.indexOf('reason')>=0)caps.thinking=true;
+
+if(tmpl.indexOf('<tool_call>')>=0||tmpl.indexOf('<|plugin|>')>=0||tmpl.indexOf('function_call')>=0||tmpl.indexOf('<tools>')>=0)caps.tools=true;
+if(allText.indexOf('tool_calls')>=0||allText.indexOf('function_call')>=0)caps.tools=true;
+
+if(allText.indexOf('code')>=0&&(allText.indexOf('programming')>=0||allText.indexOf('developer')>=0||allText.indexOf('coder')>=0))caps.code=true;
 }
 }catch(e){}
 
@@ -359,12 +371,12 @@ function renderMsgs(msgs){
 var cm=el('chatMessages');if(!cm)return;cm.innerHTML='';
 msgs.forEach(function(m){
 if(m.role==='system')return;
-cm.appendChild(mkMsg(m.role,m.content,m.images,false));
+cm.appendChild(mkMsg(m.role,m.content,m.images,m.files,false));
 });
 scrollD();
 }
 
-function mkMsg(role,content,images,animate){
+function mkMsg(role,content,images,files,animate){
 var msg=document.createElement('div');
 msg.className='message';
 
@@ -383,10 +395,24 @@ var td=document.createElement('div');
 td.className='message-text';
 
 if(role==='user'){
-var userHtml='<p>'+eh(content)+'</p>';
+var userHtml='';
+if(content){
+var displayContent=content;
+var fileBlockRegex=/\n*--- File: .+? ---\n[\s\S]*?\n--- End of file ---/g;
+displayContent=displayContent.replace(fileBlockRegex,'').trim();
+if(displayContent)userHtml+='<p>'+eh(displayContent)+'</p>';
+}
 if(images&&images.length){
 images.forEach(function(img){
 userHtml+='<img class="message-image" src="data:image/jpeg;base64,'+img+'">';
+});
+}
+if(files&&files.length){
+files.forEach(function(f){
+userHtml+='<div class="message-file-attachment">';
+userHtml+='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+userHtml+='<span>'+eh(f.name)+'</span>';
+userHtml+='</div>';
 });
 }
 td.innerHTML=userHtml;
@@ -516,6 +542,47 @@ addFile(r);
 var ap=el('attachPopup');if(ap)ap.classList.remove('show');
 }
 
+function base64ToUtf8(b64){
+try{
+var binStr=atob(b64);
+var bytes=new Uint8Array(binStr.length);
+for(var i=0;i<binStr.length;i++){
+bytes[i]=binStr.charCodeAt(i);
+}
+return new TextDecoder('utf-8').decode(bytes);
+}catch(e){
+return null;
+}
+}
+
+function isTextContent(str){
+if(!str||str.length===0)return false;
+var check=str.substring(0,Math.min(str.length,1024));
+for(var i=0;i<check.length;i++){
+var code=check.charCodeAt(i);
+if(code===0)return false;
+}
+return true;
+}
+
+function buildFileContentText(files){
+var parts=[];
+files.forEach(function(f){
+if(f.isImage)return;
+if(!f.base64||f.base64.length===0){
+parts.push('[Empty file: '+f.name+']');
+return;
+}
+var text=base64ToUtf8(f.base64);
+if(text!==null&&isTextContent(text)){
+parts.push('--- File: '+f.name+' ---\n'+text+'\n--- End of file ---');
+}else{
+parts.push('[Binary file: '+f.name+', size: '+f.size+' bytes]');
+}
+});
+return parts.join('\n\n');
+}
+
 async function sendMsg(){
 var inp=el('messageInput');
 if(!inp)return;
@@ -529,7 +596,7 @@ var conv=getActive();
 if(!conv){
 conv={
 id:Date.now().toString()+Math.random().toString(36).substr(2,4),
-title:(text||'Изображение').substring(0,50)+((text||'').length>50?'...':''),
+title:(text||'Файл').substring(0,50)+((text||'').length>50?'...':''),
 messages:[],
 created:Date.now()
 };
@@ -538,12 +605,36 @@ state.activeConversationId=conv.id;
 }
 
 var uc=conv.messages.filter(function(m){return m.role==='user'}).length;
-if(uc===0)conv.title=(text||'Изображение').substring(0,50)+((text||'').length>50?'...':'');
+if(uc===0)conv.title=(text||'Файл').substring(0,50)+((text||'').length>50?'...':'');
 
-var userMsg={role:'user',content:text||'[Изображение]'};
+var imageFiles=state.attachedFiles.filter(function(f){return f.isImage});
+var nonImageFiles=state.attachedFiles.filter(function(f){return!f.isImage});
 
-if(state.attachedFiles.length){
-userMsg.images=state.attachedFiles.filter(function(f){return f.isImage}).map(function(f){return f.base64});
+var fullContent=text||'';
+if(nonImageFiles.length>0){
+var fileText=buildFileContentText(nonImageFiles);
+if(fullContent){
+fullContent=fullContent+'\n\n'+fileText;
+}else{
+fullContent=fileText;
+}
+}
+
+var userMsg={
+role:'user',
+content:fullContent||'[Вложение]'
+};
+
+if(imageFiles.length>0){
+userMsg.images=imageFiles.map(function(f){return f.base64});
+}
+
+var fileMeta=[];
+state.attachedFiles.forEach(function(f){
+fileMeta.push({name:f.name,isImage:f.isImage,size:f.size,mime:f.mime});
+});
+if(fileMeta.length>0){
+userMsg.files=fileMeta;
 }
 
 conv.messages.push(userMsg);
@@ -566,7 +657,7 @@ state.currentRequestId='r_'+Date.now()+'_'+Math.random().toString(36).substr(2,5
 prevRenderedLen=0;
 setBtnStop();
 
-var msgEl=mkMsg('assistant','',null,false);
+var msgEl=mkMsg('assistant','',null,null,false);
 var cm=el('chatMessages');if(cm)cm.appendChild(msgEl);
 var td=msgEl.querySelector('.message-text');
 var acts=msgEl.querySelector('.message-actions');
@@ -586,41 +677,36 @@ apiMsgs.push(msg);
 });
 
 var full='',rid=state.currentRequestId,tc=0;
-var lastRenderTime=0;
-var renderQueue='';
-var renderRAF=null;
+var lastRender=0;
 
 api.removeAllChatListeners();
 
-function doRender(){
-if(!td)return;
-var html=mdRender(full);
-td.innerHTML=html+'<span class="stream-cursor"></span>';
-bindCopy(td);
-scrollD();
-renderRAF=null;
-}
-
 api.onChatToken(function(d){
 if(d.requestId!==rid)return;
-full+=d.token;tc++;
-if(!renderRAF){
-renderRAF=requestAnimationFrame(doRender);
+full+=d.token; tc++;
+
+var now=Date.now();
+if(now-lastRender>80){
+lastRender=now;
+if(td){
+td.innerHTML=mdRender(full)+'<span class="stream-cursor"></span>';
+bindCopy(td);
 }
-if(tc%40===0)partialSave(conv,full);
+smartScroll();
+}
+
+if(tc%50===0)partialSave(conv,full);
 });
 
 api.onChatDone(function(){});
 
 api.onChatEnd(function(d){
 if(d.requestId!==rid)return;
-if(renderRAF){cancelAnimationFrame(renderRAF);renderRAF=null}
 finishG(conv,full,td,acts);
 });
 
 api.onChatError(function(d){
 if(d.requestId!==rid)return;
-if(renderRAF){cancelAnimationFrame(renderRAF);renderRAF=null}
 if(full.length)finishG(conv,full,td,acts);
 else{if(td)td.innerHTML='<div class="message-error">Ошибка: '+eh(d.error)+'</div>';cleanG()}
 });
@@ -628,6 +714,14 @@ else{if(td)td.innerHTML='<div class="message-error">Ошибка: '+eh(d.error)+
 var res=await api.ollamaChatStart({model:state.selectedModel,messages:apiMsgs,requestId:rid});
 if(!res||!res.success){
 if(!full.length){if(td)td.innerHTML='<div class="message-error">Не удалось начать генерацию.</div>';cleanG()}
+}
+}
+
+function smartScroll(){
+var c=el('chatArea');
+if(!c)return;
+if(c.scrollHeight-c.scrollTop-c.clientHeight<100){
+c.scrollTop=c.scrollHeight;
 }
 }
 
@@ -646,7 +740,8 @@ bindCopy(td);
 }
 if(acts)acts.style.display='';
 conv.messages.push({role:'assistant',content:full});
-saveNow();cleanG();scrollD();
+saveNow();cleanG();
+smartScroll();
 prevRenderedLen=0;
 }
 
@@ -707,7 +802,7 @@ r=r.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
 r=r.replace(/((?:<li>.*?<\/li>\s*)+)/g,'<ul>$1</ul>');
 r=r.split(/\n\n+/).map(function(b){
 b=b.trim();if(!b)return'';
-if(/^<(h[1-6]|div|pre|table|blockquote|ul|ol|hr|li)/.test(b))return b;
+if(/^<(h[1-6]|div|pre|table|blockquote|ul|ol|hr|li|img)/.test(b))return b;
 return'<p>'+b.replace(/\n/g,'<br>')+'</p>';
 }).join('');
 return r;
