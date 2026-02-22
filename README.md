@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/version-1.1.7-blue?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/version-1.1.0-blue?style=flat-square" alt="Version">
     <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License">
     <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=flat-square" alt="Platform">
   </p>
