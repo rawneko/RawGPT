@@ -37,13 +37,13 @@
 ### Скачать
 Перейдите в раздел **Releases** и скачайте последнюю версию `RawGPT.exe`.
 
-[Download the RawGPT for android](https://gitverse.ru/rawnekoo/RawGPT-android/releases)
+[Download the RawGPT for android](https://github.com/rawneko/RawGPT-android/releases)
 
 ### Запуск из исходного кода
 
 ```bash
 # 1. Клонировать репозиторий
-git clone https://gitverse.ru/rawnekoo/RawGPT.git
+git clone https://github.com/rawneko/RawGPT.git
 
 # 2. Перейти в папку
 cd RawGPT
@@ -62,5 +62,6 @@ npm run build
 * **Electron** — Основа приложения.
 * **HTML5 / CSS3** — Интерфейс без тяжелых фреймворков.
 * **Vanilla JS** — Чистый код для максимальной скорости.
+
 
 Developed by RawNekoo.
